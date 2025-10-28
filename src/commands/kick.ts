@@ -8,29 +8,21 @@ import { RateLimiters } from '../cache/rateLimiter';
 
 const command: CommandType = {
   data: new SlashCommandBuilder()
-    .setName('ban')
-    .setDescription('Banir um membro do servidor')
+    .setName('kick')
+    .setDescription('Expulsar um membro do servidor')
     .addUserOption(option =>
       option
         .setName('usuario')
-        .setDescription('Usuário a ser banido')
+        .setDescription('Usuário a ser expulso')
         .setRequired(true)
     )
     .addStringOption(option =>
       option
         .setName('razao')
-        .setDescription('Motivo do ban')
+        .setDescription('Motivo da expulsão')
         .setRequired(false)
     )
-    .addIntegerOption(option =>
-      option
-        .setName('deletar_mensagens')
-        .setDescription('Deletar mensagens dos últimos X dias (0-7)')
-        .setMinValue(0)
-        .setMaxValue(7)
-        .setRequired(false)
-    )
-    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
+    .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers),
 
   async execute(interaction: ChatInputCommandInteraction) {
     // 1. VALIDATION: Guild check
@@ -52,42 +44,57 @@ const command: CommandType = {
 
     const targetUser = interaction.options.getUser('usuario', true);
     const reason = interaction.options.getString('razao') || 'Sem motivo especificado';
-    const deleteMessageDays = interaction.options.getInteger('deletar_mensagens') || 0;
 
     // 3. VALIDATION: Fetch target member
-    const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
+    const targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
 
-    if (!member) {
+    if (!targetMember) {
       return interaction.reply({
         content: '❌ Usuário não encontrado no servidor!',
         ephemeral: true
       });
     }
 
-    // 4. VALIDATION: Role hierarchy - User vs Target
+    // 4. VALIDATION: Check if target is bot itself
+    if (targetUser.id === interaction.client.user.id) {
+      return interaction.reply({
+        content: '❌ Não posso me expulsar!',
+        ephemeral: true,
+      });
+    }
+
+    // 5. VALIDATION: Role hierarchy - User vs Target
     const executor = interaction.member as GuildMember;
-    if (member.roles.highest.position >= executor.roles.highest.position) {
+    if (targetMember.roles.highest.position >= executor.roles.highest.position) {
       return interaction.reply({
-        content: '❌ Você não pode banir este usuário (cargo igual ou superior ao seu)!',
+        content: '❌ Você não pode expulsar este usuário (cargo igual ou superior ao seu)!',
         ephemeral: true,
       });
     }
 
-    // 5. VALIDATION: Role hierarchy - Bot vs Target
+    // 6. VALIDATION: Role hierarchy - Bot vs Target
     const botMember = await interaction.guild.members.fetchMe();
-    if (member.roles.highest.position >= botMember.roles.highest.position) {
+    if (targetMember.roles.highest.position >= botMember.roles.highest.position) {
       return interaction.reply({
-        content: '❌ Não posso banir este usuário (cargo igual ou superior ao meu)!',
+        content: '❌ Não posso expulsar este usuário (cargo igual ou superior ao meu)!',
         ephemeral: true,
       });
     }
 
-    // 6. SERVICE INTEGRATION: Get services
+    // 7. VALIDATION: Kickable check
+    if (!targetMember.kickable) {
+      return interaction.reply({
+        content: '❌ Não posso expulsar este usuário. Verifique as permissões!',
+        ephemeral: true,
+      });
+    }
+
+    // 8. SERVICE INTEGRATION: Get services
     const auditLogService = getService<IAuditLogService>(TYPES.AuditLogService);
     const userService = getService<IUserService>(TYPES.UserService);
     const guildService = getService<IGuildService>(TYPES.GuildService);
 
-    // 7. DATABASE: Ensure guild and users exist
+    // 9. DATABASE: Ensure guild and users exist
     try {
       await guildService.getOrCreateGuild(
         interaction.guild.id,
@@ -114,10 +121,10 @@ const command: CommandType = {
       logger.error('Error syncing guild/users to database:', error);
     }
 
-    // 8. DM NOTIFICATION: Try to send DM before banning
+    // 10. DM NOTIFICATION: Try to send DM before kicking
     try {
       await targetUser.send(
-        `🔨 Você foi **banido** do servidor **${interaction.guild.name}**\n` +
+        `👢 Você foi **expulso** do servidor **${interaction.guild.name}**\n` +
         `**Motivo:** ${reason}\n` +
         `**Moderador:** ${interaction.user.tag}`
       );
@@ -125,41 +132,36 @@ const command: CommandType = {
       logger.debug(`Não foi possível enviar DM para ${targetUser.tag}`);
     }
 
-    // 9. EXECUTION: Ban user
+    // 11. EXECUTION: Kick user
     try {
-      await member.ban({
-        reason: `${reason} | Banido por: ${interaction.user.tag}`,
-        deleteMessageSeconds: deleteMessageDays * 24 * 60 * 60,
-      });
+      await targetMember.kick(`${reason} | Expulso por: ${interaction.user.tag}`);
 
-      // 10. AUDIT LOG: Record action (MANDATORY - Artigo V)
+      // 12. AUDIT LOG: Record action (MANDATORY - Artigo V)
       await auditLogService.logAction(
         interaction.guild.id,
         targetUser.id,
-        AuditAction.BAN,
+        AuditAction.KICK,
         interaction.user.id,
         interaction.user.tag,
         reason,
         {
-          deleteMessageDays,
           targetTag: targetUser.tag,
           channelId: interaction.channelId,
         }
       );
 
-      logger.info(`${targetUser.tag} foi banido por ${interaction.user.tag} | Motivo: ${reason}`);
+      logger.info(`${targetUser.tag} foi expulso por ${interaction.user.tag} | Motivo: ${reason}`);
 
-      // 11. RESPONSE: User feedback
+      // 13. RESPONSE: User feedback
       await interaction.reply({
         content:
-          `✅ **${targetUser.tag}** foi banido com sucesso!\n` +
-          `**Motivo:** ${reason}\n` +
-          `**Mensagens deletadas:** ${deleteMessageDays} dias`,
+          `✅ **${targetUser.tag}** foi expulso com sucesso!\n` +
+          `**Motivo:** ${reason}`,
       });
     } catch (error) {
-      logger.error('Erro ao banir usuário:', error);
+      logger.error('Erro ao expulsar usuário:', error);
       await interaction.reply({
-        content: '❌ Erro ao banir o usuário. Verifique minhas permissões!',
+        content: '❌ Erro ao expulsar o usuário. Verifique minhas permissões!',
         ephemeral: true,
       });
     }

@@ -101,9 +101,9 @@ export class ModerationService implements IModerationService {
    * Returns true if user can be moderated, false otherwise
    */
   async canModerate(
-    guildId: string,
-    targetUserId: string,
-    moderatorUserId: string
+    _guildId: string,
+    _targetUserId: string,
+    _moderatorUserId: string
   ): Promise<{ canModerate: boolean; reason?: string }> {
     try {
       // This is where you'd implement role hierarchy checks
@@ -119,8 +119,8 @@ export class ModerationService implements IModerationService {
    * Check if a bot can moderate a user
    */
   async canBotModerate(
-    guildId: string,
-    targetUserId: string
+    _guildId: string,
+    _targetUserId: string
   ): Promise<{ canModerate: boolean; reason?: string }> {
     try {
       // Role hierarchy checks for bot

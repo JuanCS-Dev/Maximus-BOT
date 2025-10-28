@@ -1,4 +1,10 @@
-import { Client, Collection, SlashCommandBuilder, ChatInputCommandInteraction, PermissionResolvable } from 'discord.js';
+import {
+  Collection,
+  SlashCommandBuilder,
+  SlashCommandOptionsOnlyBuilder,
+  ChatInputCommandInteraction,
+  PermissionResolvable
+} from 'discord.js';
 
 // Estender tipo Client para incluir comandos
 declare module 'discord.js' {
@@ -9,8 +15,8 @@ declare module 'discord.js' {
 
 // Tipo de comando
 export interface CommandType {
-  data: SlashCommandBuilder;
-  execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
+  data: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder;
+  execute: (interaction: ChatInputCommandInteraction) => Promise<any>;
   permissions?: PermissionResolvable[];
   cooldown?: number;
 }

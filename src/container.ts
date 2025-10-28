@@ -6,8 +6,6 @@ import type {
   IUserService,
   IModerationService,
   IWarningService,
-  ICustomCommandService,
-  IReactionRoleService,
   IAuditLogService,
 } from './types/container';
 

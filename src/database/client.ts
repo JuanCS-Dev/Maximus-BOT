@@ -22,12 +22,12 @@ class DatabaseClient {
       });
 
       // Log database warnings
-      DatabaseClient.instance.$on('warn', (e) => {
+      DatabaseClient.instance.$on('warn' as never, (e: any) => {
         logger.warn(`Database warning: ${e.message}`);
       });
 
       // Log database errors
-      DatabaseClient.instance.$on('error', (e) => {
+      DatabaseClient.instance.$on('error' as never, (e: any) => {
         logger.error(`Database error: ${e.message}`);
       });
     }
