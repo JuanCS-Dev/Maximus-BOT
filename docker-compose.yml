@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: vertice-bot-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vertice
+      POSTGRES_PASSWORD: vertice_dev_password
+      POSTGRES_DB: vertice_bot
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U vertice -d vertice_bot']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vertice-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: vertice-bot-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass vertice_redis_password
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', '--raw', 'incr', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vertice-network
+
+  # Discord Bot (optional - for running bot in Docker)
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vertice-bot
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://vertice:vertice_dev_password@postgres:5432/vertice_bot
+      REDIS_URL: redis://:vertice_redis_password@redis:6379
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      CLIENT_ID: ${CLIENT_ID}
+      GUILD_ID: ${GUILD_ID}
+    env_file:
+      - .env
+    networks:
+      - vertice-network
+    # Comment out the bot service if you want to run the bot locally
+    # and just use postgres + redis from Docker
+    profiles:
+      - full
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  vertice-network:
+    driver: bridge

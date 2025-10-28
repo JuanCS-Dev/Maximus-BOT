@@ -14,6 +14,11 @@ dist/
 *.js.map
 *.d.ts
 
+# Database & Prisma
+prisma/migrations/
+# Keep the schema but ignore generated files
+!prisma/schema.prisma
+
 # Logs
 logs/
 *.log
