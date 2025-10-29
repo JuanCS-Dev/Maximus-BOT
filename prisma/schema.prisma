@@ -28,6 +28,9 @@ model Guild {
   customCommands  CustomCommand[]
   reactionRoles   ReactionRole[]
   auditLogs       AuditLog[]
+  archivedAuditLogs ArchivedAuditLog[]
+  threatDetections  ThreatDetection[]
+  incidentCases     IncidentCase[]
 
   // Timestamps
   joinedAt        DateTime        @default(now())
@@ -257,4 +260,121 @@ model AuditLog {
   @@index([targetUserId])
   @@index([action])
   @@index([createdAt])
+}
+
+// ========================================
+// ARCHIVED AUDIT LOGS (Forensic Storage)
+// ========================================
+
+model ArchivedAuditLog {
+  id                String   @id @default(cuid())
+
+  // Relations
+  guildId           String
+  guild             Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  // Discord Audit Log Data
+  discordAuditLogId String   @unique
+  actionType        String
+
+  // Actor (Moderator)
+  actorId           String?
+  actorTag          String?
+
+  // Target (User affected)
+  targetId          String?
+  targetTag         String?
+
+  // Action Details
+  reason            String?
+  changes           Json?    // Before/after state
+
+  // Forensic Chain of Custody
+  chainOfCustodyHash String  @unique // SHA-256 hash for integrity verification
+
+  // SIEM Export Status
+  exportedToSIEM    Boolean  @default(false)
+  siemExportDate    DateTime?
+
+  // Timestamps
+  createdAt         DateTime
+
+  @@map("archived_audit_logs")
+  @@index([guildId, actionType, createdAt])
+  @@index([chainOfCustodyHash])
+}
+
+// ========================================
+// THREAT DETECTIONS (Security Events)
+// ========================================
+
+model ThreatDetection {
+  id             String   @id @default(cuid())
+
+  // Relations
+  guildId        String
+  guild          Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  // Message/User Context
+  messageId      String?  // Message that triggered detection
+  userId         String
+  username       String
+
+  // Threat Classification
+  threatType     String   // phishing_url, malware_attachment, toxicity, raid, spam
+  threatScore    Int      // 0-100 severity score
+  ioc            String?  // Indicator of Compromise (URL, hash, IP)
+
+  // External Threat Intel
+  mispEventId    String?  // MISP Event ID if reported
+  openCTIId      String?  // OpenCTI Indicator ID if queried
+
+  // Response Actions
+  actionTaken    String   // delete_message, ban_user, timeout_user, alert_only, none
+
+  // Additional Context
+  metadata       Json?    // Flexible field for VirusTotal results, etc.
+
+  // Timestamps
+  createdAt      DateTime @default(now())
+
+  @@map("threat_detections")
+  @@index([guildId, createdAt])
+  @@index([threatType, threatScore])
+}
+
+// ========================================
+// INCIDENT CASES (Security Operations)
+// ========================================
+
+model IncidentCase {
+  id              String   @id @default(cuid())
+
+  // Relations
+  guildId         String
+  guild           Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  // Incident Classification
+  incidentType    String   // phishing_campaign, data_breach, raid, malware_distribution
+  severity        String   // low, medium, high, critical
+  status          String   // open, investigating, resolved, closed
+
+  // Operations
+  channelId       String   // Private IR channel created for this incident
+  assignedAnalyst String?  // User ID of analyst handling case
+
+  // Related Evidence
+  relatedThreats  String[] // Array of ThreatDetection IDs
+  timeline        Json     // Array of timestamped events
+
+  // External Ticketing
+  externalTicketId String? // ServiceNow or incident.io ticket ID
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  closedAt        DateTime?
+
+  @@map("incident_cases")
+  @@index([guildId, status, severity])
 }

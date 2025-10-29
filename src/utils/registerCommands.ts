@@ -15,6 +15,7 @@ export async function registerCommands(client: Client): Promise<void> {
 
     for (const file of commandFiles) {
       const filePath = join(commandsPath, file);
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const command: CommandType = require(filePath).default;
 
       if ('data' in command && 'execute' in command) {

@@ -6,15 +6,17 @@ import type {
   AuditLog,
   AuditAction,
   CustomCommand,
-  ReactionRole
+  ReactionRole,
+  ArchivedAuditLog
 } from '@prisma/client';
+import type { GuildAuditLogsEntry, GuildMember } from 'discord.js';
 
 /**
  * Dependency Injection Symbols
  * Used with Inversify to identify service types
  */
 export const TYPES = {
-  // Services
+  // Core Services
   GuildService: Symbol.for('GuildService'),
   UserService: Symbol.for('UserService'),
   ModerationService: Symbol.for('ModerationService'),
@@ -22,6 +24,22 @@ export const TYPES = {
   CustomCommandService: Symbol.for('CustomCommandService'),
   ReactionRoleService: Symbol.for('ReactionRoleService'),
   AuditLogService: Symbol.for('AuditLogService'),
+
+  // Security Services (Phase 2.2 & 2.3)
+  ForensicExportService: Symbol.for('ForensicExportService'),
+  AntiRaidService: Symbol.for('AntiRaidService'),
+
+  // Threat Intelligence Services (Phase 3.1)
+  ThreatIntelligenceService: Symbol.for('ThreatIntelligenceService'),
+
+  // Threat Detection Services (Phase 3.2)
+  ThreatDetectionService: Symbol.for('ThreatDetectionService'),
+
+  // Incident Response Services (Phase 4.1)
+  IncidentResponseService: Symbol.for('IncidentResponseService'),
+
+  // Metrics Services (Phase 5.4)
+  MetricsService: Symbol.for('MetricsService'),
 
   // Infrastructure
   DatabaseClient: Symbol.for('DatabaseClient'),
@@ -138,4 +156,189 @@ export interface IAuditLogService {
     }
   ): Promise<AuditLog[]>;
   getUserAuditLogs(userId: string, guildId: string): Promise<AuditLog[]>;
+}
+
+/**
+ * Security Services (Phase 2.2 & 2.3)
+ */
+
+export interface IForensicExportService {
+  cacheAuditLog(entry: GuildAuditLogsEntry, guildId: string): Promise<ArchivedAuditLog>;
+  exportToSIEM(entry: GuildAuditLogsEntry, guildId: string): Promise<boolean>;
+  batchExportAuditLogs(guildId: string, startDate: Date, endDate: Date): Promise<number>;
+  generateChainOfCustody(entry: GuildAuditLogsEntry): string;
+  getArchivedLogs(
+    guildId: string,
+    filters?: {
+      actionType?: string;
+      startDate?: Date;
+      endDate?: Date;
+      limit?: number;
+    }
+  ): Promise<ArchivedAuditLog[]>;
+}
+
+export interface IAntiRaidService {
+  detectMassJoin(guildId: string): Promise<boolean>;
+  validateAccountAge(member: GuildMember, minAgeDays?: number): Promise<boolean>;
+  triggerAutoMitigation(member: GuildMember): Promise<void>;
+  isAntiRaidEnabled(guildId: string): Promise<boolean>;
+  getRaidStats(guildId: string): Promise<{
+    totalRaids: number;
+    lastRaidDate: Date | null;
+    totalKicked: number;
+  }>;
+  resetRaidDetection(guildId: string): Promise<void>;
+}
+
+/**
+ * Threat Intelligence Services (Phase 3.1)
+ */
+
+export interface IThreatIntelligenceService {
+  queryMISP(ioc: string, iocType: string): Promise<MISPEvent | null>;
+  reportSighting(ioc: string, guildId: string): Promise<boolean>;
+  createMISPEvent(threat: ThreatData, guildId: string): Promise<MISPEvent | null>;
+  queryOpenCTI(indicator: string): Promise<OpenCTIIndicator | null>;
+  forwardToVerticeMaximus(threat: ThreatData): Promise<boolean>;
+}
+
+/**
+ * Type Definitions for Threat Intelligence
+ */
+
+export interface MISPEvent {
+  id: string;
+  info: string;
+  threat_level_id: string;
+  analysis: string;
+  tags: string[];
+  date: string;
+  orgName: string;
+  galaxies: string[];
+  attributes: number;
+}
+
+export interface OpenCTIIndicator {
+  id: string;
+  name: string;
+  pattern: string;
+  description: string;
+  createdBy: string;
+  labels: string[];
+  marking: string[];
+}
+
+export interface ThreatData {
+  type: string;
+  description: string;
+  score: number;
+  ioc: string;
+  iocType: string;
+  guildId: string;
+  userId?: string;
+  messageId?: string;
+  attachmentHashes?: string[];
+  detectionMethod?: string;
+}
+
+/**
+ * Threat Detection Services (Phase 3.2)
+ */
+
+export interface IThreatDetectionService {
+  analyzeMessage(message: any): Promise<ThreatAnalysisResult>;
+  checkURLReputation(urls: string[]): Promise<ThreatDetection | null>;
+  scanAttachments(attachments: any): Promise<ThreatDetection[]>;
+  analyzeContent(content: string): Promise<ThreatDetection | null>;
+  extractIOCs(content: string): IOCExtraction;
+}
+
+export interface ThreatAnalysisResult {
+  threatScore: number;
+  threats: ThreatDetection[];
+  iocs: IOCExtraction;
+  shouldBlock: boolean;
+  suggestedAction: 'none' | 'alert_mods' | 'delete_message' | 'timeout_user' | 'ban_user';
+}
+
+export interface ThreatDetection {
+  type: string;
+  description: string;
+  score: number;
+  ioc: string;
+  iocType: string;
+  source: string;
+  metadata?: Record<string, any>;
+}
+
+export interface IOCExtraction {
+  urls: string[];
+  ips: string[];
+  domains: string[];
+  emails: string[];
+  hashes: string[];
+}
+
+/**
+ * Incident Response Services (Phase 4.1)
+ */
+
+export interface IIncidentResponseService {
+  createInteractiveAlert(
+    client: any,
+    guildId: string,
+    threat: ThreatAlertData
+  ): Promise<string | null>;
+  handleInteractionResponse(interaction: any): Promise<boolean>;
+  updateAlertStatus(
+    alertMessageId: string,
+    action: string,
+    analyst: string,
+    success: boolean
+  ): Promise<void>;
+}
+
+export interface ThreatAlertData {
+  guildId: string;
+  channelId: string;
+  messageId: string;
+  userId: string;
+  username: string;
+  threatType: string;
+  threatScore: number;
+  description: string;
+  ioc?: string;
+  iocType?: string;
+  detectionSource?: string;
+  mispEvent?: {
+    id: string;
+    info: string;
+    threat_level_id: string;
+    tags: string[];
+  };
+  openCTIIndicator?: {
+    id: string;
+    name: string;
+    description: string;
+    labels: string[];
+  };
+}
+
+/**
+ * Metrics Services (Phase 5.4)
+ */
+
+export interface IMetricsService {
+  getMetrics(): Promise<string>;
+  updateBotHealth(uptime: number, memoryUsage: NodeJS.MemoryUsage): void;
+  updateDiscordStats(guilds: number, users: number, channels: number): void;
+  recordMessage(guildId: string): void;
+  recordThreatDetection(type: string, score: number): void;
+  recordAlert(severity: string): void;
+  recordIncident(type: string, severity: string): void;
+  recordCommandExecution(command: string, guildId: string, duration: number): void;
+  recordCommandError(command: string, errorType: string): void;
+  recordAPICall(api: string, method: string, status: string, duration: number): void;
+  recordAPIError(api: string, errorType: string): void;
 }

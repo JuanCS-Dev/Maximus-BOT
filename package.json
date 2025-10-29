@@ -7,6 +7,8 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "prisma generate && tsc",
     "start": "node dist/index.js",
+    "start:sharded": "node dist/sharding.js",
+    "dev:sharded": "ts-node-dev --respawn --transpile-only src/sharding.ts",
     "deploy": "gcloud run deploy vertice-bot --source . --region=us-central1",
     "test": "vitest run",
     "test:watch": "vitest watch",
@@ -30,9 +32,11 @@
   "license": "MIT",
   "dependencies": {
     "@prisma/client": "^5.7.1",
+    "axios": "^1.13.1",
     "discord.js": "^14.14.1",
     "dotenv": "^16.3.1",
     "inversify": "^6.0.2",
+    "prom-client": "^15.1.3",
     "redis": "^4.6.12",
     "reflect-metadata": "^0.2.1",
     "winston": "^3.11.0"

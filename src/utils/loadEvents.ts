@@ -13,6 +13,7 @@ export async function loadEvents(client: Client): Promise<void> {
 
     for (const file of eventFiles) {
       const filePath = join(eventsPath, file);
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const event = require(filePath).default;
 
       if (event.once) {
