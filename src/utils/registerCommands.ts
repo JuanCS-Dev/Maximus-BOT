@@ -1,11 +1,11 @@
-import { Client, REST, Routes } from 'discord.js';
+import { Client, REST, Routes, RESTPostAPIApplicationCommandsJSONBody } from 'discord.js';
 import { readdirSync } from 'fs';
 import { join } from 'path';
 import { logger } from './logger';
 import { CommandType } from '../types';
 
 export async function registerCommands(client: Client): Promise<void> {
-  const commands: any[] = [];
+  const commands: RESTPostAPIApplicationCommandsJSONBody[] = [];
   const commandsPath = join(__dirname, '../commands');
 
   try {

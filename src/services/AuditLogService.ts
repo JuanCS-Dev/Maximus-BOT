@@ -1,5 +1,5 @@
 import { injectable } from 'inversify';
-import { AuditLog, AuditAction } from '@prisma/client';
+import { AuditLog, AuditAction, Prisma } from '@prisma/client';
 import { prisma } from '../database/client';
 import { logger } from '../utils/logger';
 import type { IAuditLogService } from '../types/container';
@@ -20,7 +20,7 @@ export class AuditLogService implements IAuditLogService {
     moderatorId: string,
     moderatorTag: string,
     reason?: string,
-    metadata?: any
+    metadata?: Record<string, unknown>
   ): Promise<AuditLog> {
     try {
       const auditLog = await prisma.auditLog.create({
@@ -30,8 +30,8 @@ export class AuditLogService implements IAuditLogService {
           action,
           moderatorId,
           moderatorTag,
-          reason: reason || null,
-          metadata: metadata || null,
+          reason: reason ?? undefined,
+          metadata: (metadata as Prisma.InputJsonValue) ?? undefined,
         },
       });
 
@@ -60,7 +60,12 @@ export class AuditLogService implements IAuditLogService {
     }
   ): Promise<AuditLog[]> {
     try {
-      const where: any = { guildId };
+      const where: {
+        guildId: string;
+        action?: AuditAction;
+        targetUserId?: string;
+        moderatorId?: string;
+      } = { guildId };
 
       if (filters?.action) {
         where.action = filters.action;
@@ -165,7 +170,7 @@ export class AuditLogService implements IAuditLogService {
         },
       });
 
-      const actionsByType: any = {};
+      const actionsByType: Record<AuditAction, number> = {} as Record<AuditAction, number>;
       for (const item of actionCounts) {
         actionsByType[item.action] = item._count.action;
       }
