@@ -34,6 +34,9 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
+# Test Coverage
+coverage/
+
 # Misc
 *.tgz
 .npm
