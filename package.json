@@ -8,6 +8,10 @@
     "build": "prisma generate && tsc",
     "start": "node dist/index.js",
     "deploy": "gcloud run deploy vertice-bot --source . --region=us-central1",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "prisma:generate": "prisma generate",
@@ -34,14 +38,18 @@
     "winston": "^3.11.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
     "@types/node": "^20.10.5",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
+    "@vitest/coverage-v8": "^4.0.4",
+    "@vitest/ui": "^4.0.4",
     "eslint": "^8.56.0",
     "prettier": "^3.1.1",
     "prisma": "^5.7.1",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^4.0.4"
   },
   "engines": {
     "node": ">=18.0.0"
