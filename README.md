@@ -361,16 +361,30 @@ Maximus-BOT/
 
 ## 🎮 COMANDOS DISCORD
 
-### Moderação
+### 🛡️ Moderação Básica
 
 | Comando | Descrição | Permissão |
 |---------|-----------|-----------|
 | `/ban <user> [reason] [messages]` | Banir usuário do servidor | `BAN_MEMBERS` |
 | `/kick <user> [reason]` | Expulsar usuário | `KICK_MEMBERS` |
-| `/timeout <user> <duration> [reason]` | Timeout em usuário | `MODERATE_MEMBERS` |
-| `/warn <user> <reason>` | Adicionar warning | `MODERATE_MEMBERS` |
+| `/mute <user> <duration> [reason]` | Silenciar usuário (timeout) | `MODERATE_MEMBERS` |
+| `/unmute <user>` | Remover silenciamento | `MODERATE_MEMBERS` |
+| `/warn <user> <reason>` | Adicionar warning ao usuário | `MODERATE_MEMBERS` |
+| `/warnings <user>` | Ver warnings de um usuário | `MODERATE_MEMBERS` |
+| `/clear-warnings <user>` | Limpar warnings de usuário | `ADMINISTRATOR` |
 
-### Incident Response
+### 🔧 Gerenciamento de Servidor
+
+| Comando | Descrição | Permissão |
+|---------|-----------|-----------|
+| `/lockdown [channel]` | Bloquear canal (modo emergência) | `MANAGE_CHANNELS` |
+| `/unlock [channel]` | Desbloquear canal | `MANAGE_CHANNELS` |
+| `/slowmode <seconds> [channel]` | Configurar modo lento | `MANAGE_CHANNELS` |
+| `/purge <quantidade> [user]` | Deletar mensagens em massa | `MANAGE_MESSAGES` |
+| `/role <user> <action> <role>` | Gerenciar cargos de usuário | `MANAGE_ROLES` |
+| `/nick <user> <nickname>` | Alterar apelido de usuário | `MANAGE_NICKNAMES` |
+
+### 🚨 Incident Response
 
 | Comando | Descrição | Permissão |
 |---------|-----------|-----------|
@@ -378,7 +392,7 @@ Maximus-BOT/
 | `/incident list` | Listar casos abertos | `ADMINISTRATOR` |
 | `/incident close <case_id> <resolution>` | Fechar caso | `ADMINISTRATOR` |
 
-### Segurança
+### 🔍 Segurança & Threat Intelligence
 
 | Comando | Descrição | Permissão |
 |---------|-----------|-----------|
@@ -386,14 +400,26 @@ Maximus-BOT/
 | `/scan file:[arquivo]` | Escanear arquivo | `MODERATE_MEMBERS` |
 | `/threatinfo [user]` | Ver detecções recentes | `ADMINISTRATOR` |
 
-### Utilidades
+### 📊 Informações & Utilidades
+
+| Comando | Descrição | Permissão |
+|---------|-----------|-----------|
+| `/serverinfo` | Informações do servidor | `MODERATE_MEMBERS` |
+| `/userinfo <user>` | Informações de usuário | `MODERATE_MEMBERS` |
+| `/avatar <user>` | Ver avatar de usuário | Todos |
+| `/poll <pergunta> [opções]` | Criar enquete | `MODERATE_MEMBERS` |
+| `/announce <mensagem> [canal]` | Fazer anúncio | `MANAGE_MESSAGES` |
+| `/audit [user] [action]` | Ver audit log | `ADMINISTRATOR` |
+
+### 🛠️ Sistema
 
 | Comando | Descrição | Permissão |
 |---------|-----------|-----------|
 | `/ping` | Testar latência do bot | Todos |
 | `/stats` | Estatísticas do servidor | `MODERATE_MEMBERS` |
-| `/audit [user] [action]` | Ver audit log | `ADMINISTRATOR` |
 | `/help [command]` | Listar comandos | Todos |
+
+**Total de Comandos:** 30+ implementados ✅
 
 ---
 
@@ -584,7 +610,7 @@ furnished to do so, subject to the following conditions:
 
 - **Linhas de Código:** 9.564+
 - **Arquivos TypeScript:** 47
-- **Comandos Discord:** 15+
+- **Comandos Discord:** 30+ (todos implementados ✅)
 - **Serviços Integrados:** 6 (MISP, OpenCTI, Safe Browsing, VirusTotal, Prometheus, Grafana)
 - **Phases Complete:** 5/5 (100%)
 
