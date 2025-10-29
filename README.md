@@ -95,6 +95,30 @@ Ver: [VALIDATION_CERTIFICATE.md](VALIDATION_CERTIFICATE.md)
 | **High Availability** | ✅ | Auto-restart, graceful shutdown |
 | **Multi-Shard Support** | ✅ | Distribuição automática de carga |
 
+### 🤖 AI & Automation (Phase 6.1)
+
+| Feature | Status | Descrição |
+|---------|--------|-----------|
+| **Claude 3.5 Sonnet** | ✅ | AI-powered moderation and analysis |
+| **Context Menus** | ✅ | Right-click actions (Analyze Threat, Check Reputation, Report to MISP) |
+| **Discord AutoMod v2** | ✅ | Native ML-based content filtering (FREE!) |
+| **Phishing Detection** | ✅ | AI-powered phishing analysis with confidence scoring |
+| **Toxicity Analysis** | ✅ | Context-aware toxicity detection |
+| **Security Chatbot** | ✅ | `/ask` command for security Q&A |
+| **Ephemeral Responses** | ✅ | All 15 moderation commands now private |
+
+### 🎮 Gamification System (Phase 6.2)
+
+| Feature | Status | Descrição |
+|---------|--------|-----------|
+| **XP & Leveling** | ✅ | 15 XP per message, 5 XP per voice minute |
+| **Badge System** | ✅ | 7 default badges (common → legendary) |
+| **Leaderboards** | ✅ | Daily, weekly, monthly, all-time rankings |
+| **Level-up Notifications** | ✅ | Automatic congratulations with progress |
+| **Voice Chat XP** | ✅ | Earn XP while in voice channels |
+| **Message Streaks** | ✅ | Daily activity tracking |
+| **Progress Bars** | ✅ | Visual XP progress display |
+
 ---
 
 ## 🚀 QUICK START

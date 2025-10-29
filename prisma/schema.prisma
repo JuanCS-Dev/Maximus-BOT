@@ -1,6 +1,3 @@
-// This is your Prisma schema file
-// Learn more: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,212 +7,288 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ========================================
-// GUILD (SERVER) CONFIGURATION
-// ========================================
-
 model Guild {
-  id              String          @id // Discord Guild ID
-  name            String
-  iconUrl         String?
-  locale          String          @default("pt-BR")
-  prefix          String          @default("!")
-
-  // Relations
-  settings        GuildSettings?
-  users           User[]
-  warnings        Warning[]
-  customCommands  CustomCommand[]
-  reactionRoles   ReactionRole[]
-  auditLogs       AuditLog[]
+  id                String             @id
+  name              String
+  iconUrl           String?
+  locale            String             @default("pt-BR")
+  prefix            String             @default("!")
+  joinedAt          DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
   archivedAuditLogs ArchivedAuditLog[]
-  threatDetections  ThreatDetection[]
+  auditLogs         AuditLog[]
+  customCommands    CustomCommand[]
+  settings          GuildSettings?
   incidentCases     IncidentCase[]
-
-  // Timestamps
-  joinedAt        DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  reactionRoles     ReactionRole[]
+  threatDetections  ThreatDetection[]
+  warnings          Warning[]
+  users             User[]             @relation("GuildToUser")
 
   @@map("guilds")
 }
 
-// ========================================
-// GUILD SETTINGS
-// ========================================
-
 model GuildSettings {
-  id                  String   @id @default(cuid())
-  guildId             String   @unique
-  guild               Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  // Moderation Settings
-  modLogChannelId     String?
-  muteRoleId          String?
-  autoModEnabled      Boolean  @default(false)
-  antiSpamEnabled     Boolean  @default(false)
-  antiRaidEnabled     Boolean  @default(false)
-  maxWarnings         Int      @default(3)
-
-  // Auto-Moderation Settings
-  profanityFilterEnabled  Boolean  @default(false)
-  linkFilterEnabled       Boolean  @default(false)
-  inviteFilterEnabled     Boolean  @default(false)
-  maxMentions             Int      @default(5)
-  maxEmojis               Int      @default(10)
-  spamThreshold           Int      @default(5) // messages in 5 seconds
-
-  // Welcome/Goodbye
-  welcomeChannelId    String?
-  welcomeMessage      String?
-  goodbyeChannelId    String?
-  goodbyeMessage      String?
-
-  // Auto-Role
-  autoRoleEnabled     Boolean  @default(false)
-  autoRoleId          String?
-
-  // Logging
-  logMessageDelete    Boolean  @default(true)
-  logMessageEdit      Boolean  @default(true)
-  logMemberJoin       Boolean  @default(true)
-  logMemberLeave      Boolean  @default(true)
-  logMemberUpdate     Boolean  @default(true)
-  logChannelCreate    Boolean  @default(true)
-  logChannelDelete    Boolean  @default(true)
-  logRoleCreate       Boolean  @default(true)
-  logRoleDelete       Boolean  @default(true)
-
-  // Timestamps
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                     String   @id @default(cuid())
+  guildId                String   @unique
+  modLogChannelId        String?
+  muteRoleId             String?
+  autoModEnabled         Boolean  @default(false)
+  antiSpamEnabled        Boolean  @default(false)
+  antiRaidEnabled        Boolean  @default(false)
+  maxWarnings            Int      @default(3)
+  profanityFilterEnabled Boolean  @default(false)
+  linkFilterEnabled      Boolean  @default(false)
+  inviteFilterEnabled    Boolean  @default(false)
+  maxMentions            Int      @default(5)
+  maxEmojis              Int      @default(10)
+  spamThreshold          Int      @default(5)
+  welcomeChannelId       String?
+  welcomeMessage         String?
+  goodbyeChannelId       String?
+  goodbyeMessage         String?
+  autoRoleEnabled        Boolean  @default(false)
+  autoRoleId             String?
+  logMessageDelete       Boolean  @default(true)
+  logMessageEdit         Boolean  @default(true)
+  logMemberJoin          Boolean  @default(true)
+  logMemberLeave         Boolean  @default(true)
+  logMemberUpdate        Boolean  @default(true)
+  logChannelCreate       Boolean  @default(true)
+  logChannelDelete       Boolean  @default(true)
+  logRoleCreate          Boolean  @default(true)
+  logRoleDelete          Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  guild                  Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@map("guild_settings")
 }
 
-// ========================================
-// USERS
-// ========================================
-
 model User {
-  id              String     @id // Discord User ID
-  username        String
-  discriminator   String
-  avatarUrl       String?
-  isBot           Boolean    @default(false)
-
-  // Relations
-  guilds          Guild[]
-  warnings        Warning[]
-  auditLogs       AuditLog[]
-
-  // Timestamps
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  id            String     @id
+  username      String
+  discriminator String
+  avatarUrl     String?
+  isBot         Boolean    @default(false)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  auditLogs     AuditLog[]
+  warnings      Warning[]
+  guilds        Guild[]    @relation("GuildToUser")
 
   @@map("users")
 }
 
-// ========================================
-// WARNINGS
-// ========================================
-
 model Warning {
-  id              String     @id @default(cuid())
+  id           String    @id @default(cuid())
+  userId       String
+  guildId      String
+  reason       String
+  moderatorId  String
+  moderatorTag String
+  active       Boolean   @default(true)
+  clearedAt    DateTime?
+  clearedBy    String?
+  createdAt    DateTime  @default(now())
+  guild        Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Relations
-  userId          String
-  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  guildId         String
-  guild           Guild      @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  // Warning Data
-  reason          String
-  moderatorId     String
-  moderatorTag    String
-
-  // Status
-  active          Boolean    @default(true)
-  clearedAt       DateTime?
-  clearedBy       String?
-
-  // Timestamps
-  createdAt       DateTime   @default(now())
-
-  @@map("warnings")
   @@index([userId, guildId])
   @@index([guildId])
+  @@map("warnings")
 }
-
-// ========================================
-// CUSTOM COMMANDS
-// ========================================
 
 model CustomCommand {
-  id              String     @id @default(cuid())
-
-  // Relations
+  id              String   @id @default(cuid())
   guildId         String
-  guild           Guild      @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  // Command Data
   trigger         String
   response        String
-  isEmbed         Boolean    @default(false)
+  isEmbed         Boolean  @default(false)
   embedColor      String?
   embedTitle      String?
-
-  // Permissions
   requiredRole    String?
-  allowedChannels String[]   @default([])
-
-  // Statistics
-  useCount        Int        @default(0)
-
-  // Timestamps
-  createdAt       DateTime   @default(now())
+  allowedChannels String[] @default([])
+  useCount        Int      @default(0)
+  createdAt       DateTime @default(now())
   createdBy       String
-  updatedAt       DateTime   @updatedAt
+  updatedAt       DateTime @updatedAt
   updatedBy       String?
+  guild           Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
-  @@map("custom_commands")
   @@unique([guildId, trigger])
   @@index([guildId])
+  @@map("custom_commands")
 }
-
-// ========================================
-// REACTION ROLES
-// ========================================
 
 model ReactionRole {
-  id              String     @id @default(cuid())
+  id            String   @id @default(cuid())
+  guildId       String
+  channelId     String
+  messageId     String   @unique
+  roleMapping   Json
+  maxRoles      Int?
+  removeOnReact Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  createdBy     String
+  guild         Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
-  // Relations
-  guildId         String
-  guild           Guild      @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  // Message Data
-  channelId       String
-  messageId       String
-
-  // Role Mapping (JSON: { "emoji": "roleId" })
-  roleMapping     Json
-
-  // Options
-  maxRoles        Int?       // null = unlimited
-  removeOnReact   Boolean    @default(false) // Remove other roles when reacting
-
-  // Timestamps
-  createdAt       DateTime   @default(now())
-  createdBy       String
-
-  @@map("reaction_roles")
-  @@unique([messageId])
   @@index([guildId])
+  @@map("reaction_roles")
 }
 
-// ========================================
-// AUDIT LOGS (Moderation Actions)
-// ========================================
+model AuditLog {
+  id           String      @id @default(cuid())
+  guildId      String
+  targetUserId String
+  action       AuditAction
+  moderatorId  String
+  moderatorTag String
+  reason       String?
+  metadata     Json?
+  createdAt    DateTime    @default(now())
+  guild        Guild       @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  targetUser   User        @relation(fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@index([guildId])
+  @@index([targetUserId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model ArchivedAuditLog {
+  id                 String    @id @default(cuid())
+  guildId            String
+  discordAuditLogId  String    @unique
+  actionType         String
+  actorId            String?
+  actorTag           String?
+  targetId           String?
+  targetTag          String?
+  reason             String?
+  changes            Json?
+  chainOfCustodyHash String    @unique
+  exportedToSIEM     Boolean   @default(false)
+  siemExportDate     DateTime?
+  createdAt          DateTime
+  guild              Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId, actionType, createdAt])
+  @@index([chainOfCustodyHash])
+  @@map("archived_audit_logs")
+}
+
+model ThreatDetection {
+  id          String   @id @default(cuid())
+  guildId     String
+  messageId   String?
+  userId      String
+  username    String
+  threatType  String
+  threatScore Int
+  ioc         String?
+  mispEventId String?
+  openCTIId   String?
+  actionTaken String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  guild       Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId, createdAt])
+  @@index([threatType, threatScore])
+  @@map("threat_detections")
+}
+
+model IncidentCase {
+  id               String    @id @default(cuid())
+  guildId          String
+  incidentType     String
+  severity         String
+  status           String
+  channelId        String
+  assignedAnalyst  String?
+  relatedThreats   String[]
+  timeline         Json
+  externalTicketId String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  closedAt         DateTime?
+  guild            Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId, status, severity])
+  @@map("incident_cases")
+}
+
+model UserLevel {
+  id              String    @id @default(cuid())
+  userId          String
+  guildId         String
+  xp              Int       @default(0)
+  level           Int       @default(1)
+  totalMessages   Int       @default(0)
+  totalVoiceTime  Int       @default(0)
+  lastMessageAt   DateTime?
+  lastVoiceJoinAt DateTime?
+  messageStreak   Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([userId, guildId])
+  @@index([guildId, level])
+  @@index([guildId, xp])
+  @@map("user_levels")
+}
+
+model Badge {
+  id           String      @id @default(cuid())
+  name         String
+  description  String
+  emoji        String
+  rarity       String
+  category     String
+  requirements Json
+  xpBonus      Int         @default(0)
+  roleReward   String?
+  createdAt    DateTime    @default(now())
+  userBadges   UserBadge[]
+
+  @@map("badges")
+}
+
+model UserBadge {
+  id         String   @id @default(cuid())
+  userId     String
+  guildId    String
+  badgeId    String
+  unlockedAt DateTime @default(now())
+  showcased  Boolean  @default(false)
+  badge      Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, guildId, badgeId])
+  @@index([userId, guildId])
+  @@map("user_badges")
+}
+
+model Leaderboard {
+  id             String   @id @default(cuid())
+  guildId        String
+  userId         String
+  username       String
+  rank           Int
+  xp             Int
+  level          Int
+  totalMessages  Int
+  totalVoiceTime Int
+  period         String
+  periodStart    DateTime
+  periodEnd      DateTime
+  createdAt      DateTime @default(now())
+
+  @@unique([guildId, userId, period, periodStart])
+  @@index([guildId, period, rank])
+  @@map("leaderboards")
+}
 
 enum AuditAction {
   BAN
@@ -232,149 +305,4 @@ enum AuditAction {
   ROLE_ADD
   ROLE_REMOVE
   NICK_CHANGE
-}
-
-model AuditLog {
-  id              String       @id @default(cuid())
-
-  // Relations
-  guildId         String
-  guild           Guild        @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  targetUserId    String
-  targetUser      User         @relation(fields: [targetUserId], references: [id], onDelete: Cascade)
-
-  // Action Data
-  action          AuditAction
-  moderatorId     String
-  moderatorTag    String
-  reason          String?
-
-  // Additional Data (JSON for flexibility)
-  metadata        Json?
-
-  // Timestamps
-  createdAt       DateTime     @default(now())
-
-  @@map("audit_logs")
-  @@index([guildId])
-  @@index([targetUserId])
-  @@index([action])
-  @@index([createdAt])
-}
-
-// ========================================
-// ARCHIVED AUDIT LOGS (Forensic Storage)
-// ========================================
-
-model ArchivedAuditLog {
-  id                String   @id @default(cuid())
-
-  // Relations
-  guildId           String
-  guild             Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  // Discord Audit Log Data
-  discordAuditLogId String   @unique
-  actionType        String
-
-  // Actor (Moderator)
-  actorId           String?
-  actorTag          String?
-
-  // Target (User affected)
-  targetId          String?
-  targetTag         String?
-
-  // Action Details
-  reason            String?
-  changes           Json?    // Before/after state
-
-  // Forensic Chain of Custody
-  chainOfCustodyHash String  @unique // SHA-256 hash for integrity verification
-
-  // SIEM Export Status
-  exportedToSIEM    Boolean  @default(false)
-  siemExportDate    DateTime?
-
-  // Timestamps
-  createdAt         DateTime
-
-  @@map("archived_audit_logs")
-  @@index([guildId, actionType, createdAt])
-  @@index([chainOfCustodyHash])
-}
-
-// ========================================
-// THREAT DETECTIONS (Security Events)
-// ========================================
-
-model ThreatDetection {
-  id             String   @id @default(cuid())
-
-  // Relations
-  guildId        String
-  guild          Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  // Message/User Context
-  messageId      String?  // Message that triggered detection
-  userId         String
-  username       String
-
-  // Threat Classification
-  threatType     String   // phishing_url, malware_attachment, toxicity, raid, spam
-  threatScore    Int      // 0-100 severity score
-  ioc            String?  // Indicator of Compromise (URL, hash, IP)
-
-  // External Threat Intel
-  mispEventId    String?  // MISP Event ID if reported
-  openCTIId      String?  // OpenCTI Indicator ID if queried
-
-  // Response Actions
-  actionTaken    String   // delete_message, ban_user, timeout_user, alert_only, none
-
-  // Additional Context
-  metadata       Json?    // Flexible field for VirusTotal results, etc.
-
-  // Timestamps
-  createdAt      DateTime @default(now())
-
-  @@map("threat_detections")
-  @@index([guildId, createdAt])
-  @@index([threatType, threatScore])
-}
-
-// ========================================
-// INCIDENT CASES (Security Operations)
-// ========================================
-
-model IncidentCase {
-  id              String   @id @default(cuid())
-
-  // Relations
-  guildId         String
-  guild           Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  // Incident Classification
-  incidentType    String   // phishing_campaign, data_breach, raid, malware_distribution
-  severity        String   // low, medium, high, critical
-  status          String   // open, investigating, resolved, closed
-
-  // Operations
-  channelId       String   // Private IR channel created for this incident
-  assignedAnalyst String?  // User ID of analyst handling case
-
-  // Related Evidence
-  relatedThreats  String[] // Array of ThreatDetection IDs
-  timeline        Json     // Array of timestamped events
-
-  // External Ticketing
-  externalTicketId String? // ServiceNow or incident.io ticket ID
-
-  // Timestamps
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  closedAt        DateTime?
-
-  @@map("incident_cases")
-  @@index([guildId, status, severity])
 }

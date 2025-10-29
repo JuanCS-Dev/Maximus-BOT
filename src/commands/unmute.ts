@@ -143,6 +143,7 @@ const command: CommandType = {
         content:
           `✅ Silenciamento de **${targetUser.tag}** foi removido com sucesso!\n` +
           `**Motivo:** ${reason}`,
+        ephemeral: true,
       });
     } catch (error) {
       logger.error('Erro ao remover silenciamento:', error);

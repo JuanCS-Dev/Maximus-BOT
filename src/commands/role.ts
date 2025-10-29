@@ -237,6 +237,7 @@ const command: CommandType = {
         content:
           `${emoji} Cargo **${role.name}** ${actionText} **${targetUser.tag}** com sucesso!\n` +
           `**Motivo:** ${reason}`,
+        ephemeral: true,
       });
     } catch (error) {
       logger.error('Erro ao modificar cargo:', error);

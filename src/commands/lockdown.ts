@@ -143,6 +143,7 @@ const command: CommandType = {
           `**Motivo:** ${reason}\n\n` +
           `Apenas membros com permissões especiais podem enviar mensagens agora.\n` +
           `Use \`/unlock\` para desbloquear o canal.`,
+        ephemeral: true,
       });
     } catch (error) {
       logger.error('Erro ao bloquear canal:', error);

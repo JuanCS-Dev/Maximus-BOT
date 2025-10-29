@@ -9,6 +9,7 @@ export async function registerCommands(client: Client): Promise<void> {
   const commandsPath = join(__dirname, '../commands');
 
   try {
+    // Load regular commands from root
     const commandFiles = readdirSync(commandsPath).filter(file =>
       file.endsWith('.ts') || file.endsWith('.js')
     );
@@ -25,6 +26,31 @@ export async function registerCommands(client: Client): Promise<void> {
       } else {
         logger.warn(`Comando em ${file} está faltando "data" ou "execute"`);
       }
+    }
+
+    // Load context menu commands from /context subfolder
+    const contextPath = join(commandsPath, 'context');
+    try {
+      const contextFiles = readdirSync(contextPath).filter(file =>
+        file.endsWith('.ts') || file.endsWith('.js')
+      );
+
+      for (const file of contextFiles) {
+        const filePath = join(contextPath, file);
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const contextCommand = require(filePath).default;
+
+        if ('data' in contextCommand && 'execute' in contextCommand) {
+          client.commands.set(contextCommand.data.name, contextCommand);
+          commands.push(contextCommand.data.toJSON());
+          logger.debug(`Context menu carregado: ${contextCommand.data.name}`);
+        } else {
+          logger.warn(`Context menu em ${file} está faltando "data" ou "execute"`);
+        }
+      }
+    } catch (error) {
+      // Context folder might not exist yet
+      logger.debug('Context menu folder not found or empty');
     }
 
     // Registrar comandos no Discord

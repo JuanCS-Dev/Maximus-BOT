@@ -66,7 +66,7 @@ const command: CommandType = {
 
     // 5. EXECUTION: Gather user information
     try {
-      await interaction.deferReply();
+      await interaction.deferReply({ ephemeral: true });
 
       // Fetch member
       const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);

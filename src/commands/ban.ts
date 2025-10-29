@@ -155,6 +155,7 @@ const command: CommandType = {
           `✅ **${targetUser.tag}** foi banido com sucesso!\n` +
           `**Motivo:** ${reason}\n` +
           `**Mensagens deletadas:** ${deleteMessageDays} dias`,
+        ephemeral: true,
       });
     } catch (error) {
       logger.error('Erro ao banir usuário:', error);

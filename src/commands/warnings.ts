@@ -172,7 +172,7 @@ const command: CommandType = {
       }
 
       // 6. RESPONSE: Send embed
-      await interaction.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed], ephemeral: true });
 
       logger.info(`Avisos de ${targetUser.tag} consultados por ${interaction.user.tag}`);
     } catch (error) {

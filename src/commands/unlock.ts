@@ -135,6 +135,7 @@ const command: CommandType = {
           `**Canal:** ${channel.name}\n` +
           `**Motivo:** ${reason}\n\n` +
           `Todos os membros podem enviar mensagens novamente.`,
+        ephemeral: true,
       });
     } catch (error) {
       logger.error('Erro ao desbloquear canal:', error);

@@ -152,6 +152,7 @@ const command: CommandType = {
           `✅ Avisos de **${targetUser.tag}** foram limpos com sucesso!\n` +
           `**Avisos limpos:** ${clearedCount}\n` +
           `**Motivo:** ${reason}`,
+        ephemeral: true,
       });
     } catch (error) {
       logger.error('Erro ao limpar avisos:', error);

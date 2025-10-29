@@ -148,6 +148,7 @@ const command: CommandType = {
 
       await interaction.reply({
         content: responseMessage,
+        ephemeral: true,
       });
     } catch (error) {
       logger.error('Erro ao configurar slowmode:', error);

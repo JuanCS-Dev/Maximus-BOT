@@ -38,6 +38,13 @@ import { IncidentResponseService } from './services/IncidentResponseService';
 // Import metrics services (Phase 5.4)
 import { MetricsService } from './services/MetricsService';
 
+// Import AI services (Phase 6.1)
+import { AIAssistantService } from './services/AIAssistantService';
+import { AutoModService } from './services/AutoModService';
+
+// Import gamification services (Phase 6.2)
+import { GamificationService } from './services/GamificationService';
+
 /**
  * Inversify Container
  * Central registry for all dependencies
@@ -71,6 +78,13 @@ export function configureContainer(): Container {
 
   // Bind metrics services (Phase 5.4)
   container.bind<IMetricsService>(TYPES.MetricsService).to(MetricsService).inSingletonScope();
+
+  // Bind AI services (Phase 6.1)
+  container.bind<AIAssistantService>(TYPES.AIAssistantService).to(AIAssistantService).inSingletonScope();
+  container.bind<AutoModService>(TYPES.AutoModService).to(AutoModService).inSingletonScope();
+
+  // Bind gamification services (Phase 6.2)
+  container.bind<GamificationService>(TYPES.GamificationService).to(GamificationService).inSingletonScope();
 
   // CustomCommandService and ReactionRoleService will be added in Phase 2.4+
   // container.bind<ICustomCommandService>(TYPES.CustomCommandService).to(CustomCommandService).inSingletonScope();

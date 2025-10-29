@@ -212,6 +212,7 @@ const command: CommandType = {
           `**Motivo:** ${reason}\n` +
           `**Avisos ativos:** ${activeWarnings}/${settings.maxWarnings}` +
           autoActionMessage,
+        ephemeral: true,
       });
     } catch (error) {
       logger.error('Erro ao avisar usuário:', error);

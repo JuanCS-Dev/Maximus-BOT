@@ -157,6 +157,7 @@ const command: CommandType = {
         content:
           `✅ **${targetUser.tag}** foi expulso com sucesso!\n` +
           `**Motivo:** ${reason}`,
+        ephemeral: true,
       });
     } catch (error) {
       logger.error('Erro ao expulsar usuário:', error);

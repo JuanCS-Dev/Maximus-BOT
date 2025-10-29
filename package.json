@@ -31,6 +31,7 @@
   "author": "Sistema Vértice",
   "license": "MIT",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
     "@prisma/client": "^5.7.1",
     "axios": "^1.13.1",
     "discord.js": "^14.14.1",

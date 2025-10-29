@@ -196,6 +196,7 @@ const command: CommandType = {
           `**Duração:** ${durationMinutes} minuto(s)\n` +
           `**Expira em:** <t:${Math.floor(expiresAt.getTime() / 1000)}:R>\n` +
           `**Motivo:** ${reason}`,
+        ephemeral: true,
       });
     } catch (error) {
       logger.error('Erro ao silenciar usuário:', error);

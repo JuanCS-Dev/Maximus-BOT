@@ -41,6 +41,13 @@ export const TYPES = {
   // Metrics Services (Phase 5.4)
   MetricsService: Symbol.for('MetricsService'),
 
+  // AI Services (Phase 6.1)
+  AIAssistantService: Symbol.for('AIAssistantService'),
+  AutoModService: Symbol.for('AutoModService'),
+
+  // Gamification Services (Phase 6.2)
+  GamificationService: Symbol.for('GamificationService'),
+
   // Infrastructure
   DatabaseClient: Symbol.for('DatabaseClient'),
   CacheClient: Symbol.for('CacheClient'),
