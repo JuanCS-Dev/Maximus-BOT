@@ -12,6 +12,7 @@
 
 import 'reflect-metadata'; // Required for Inversify
 import { Client, GatewayIntentBits, Collection, Partials } from 'discord.js';
+import express from 'express';
 import dotenv from 'dotenv';
 import { logger } from './utils/logger';
 import { registerCommands } from './utils/registerCommands';
@@ -45,6 +46,39 @@ const client = new Client({
 
 // Adicionar coleção de comandos ao cliente
 client.commands = new Collection<string, CommandType>();
+
+// Health check HTTP server para Cloud Run
+const app = express();
+const PORT = process.env.PORT || 8080;
+
+app.get('/health', (_req, res) => {
+  const isHealthy = client.isReady();
+  const status = isHealthy ? 200 : 503;
+
+  res.status(status).json({
+    status: isHealthy ? 'healthy' : 'unhealthy',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    guilds: client.guilds.cache.size,
+    users: client.users.cache.size,
+    commands: client.commands.size,
+    ping: client.ws.ping,
+  });
+});
+
+app.get('/', (_req, res) => {
+  res.status(200).json({
+    name: 'Vértice Discord Bot',
+    version: '1.0.0',
+    status: 'running',
+    uptime: process.uptime(),
+  });
+});
+
+// Start HTTP server
+app.listen(PORT, () => {
+  logger.info(`🏥 Health check server listening on port ${PORT}`);
+});
 
 // Inicializar bot
 async function start() {

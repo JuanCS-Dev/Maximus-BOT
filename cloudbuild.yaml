@@ -1,0 +1,76 @@
+steps:
+  # Step 1: Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/vertice-discord-bot/bot:$COMMIT_SHA'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/vertice-discord-bot/bot:latest'
+      - '.'
+    id: 'build-image'
+
+  # Step 2: Push Docker image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/vertice-discord-bot/bot:$COMMIT_SHA'
+    id: 'push-image-sha'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/vertice-discord-bot/bot:latest'
+    id: 'push-image-latest'
+
+  # Step 3: Run Prisma migrations on Cloud SQL
+  - name: 'us-central1-docker.pkg.dev/$PROJECT_ID/vertice-discord-bot/bot:$COMMIT_SHA'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        echo "Running Prisma migrations..."
+        npx prisma migrate deploy
+    env:
+      - 'DATABASE_URL=${_DATABASE_URL}'
+    id: 'run-migrations'
+
+  # Step 4: Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'vertice-discord-bot'
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/vertice-discord-bot/bot:$COMMIT_SHA'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--min-instances=1'
+      - '--max-instances=1'
+      - '--memory=2Gi'
+      - '--cpu=1'
+      - '--timeout=3600'
+      - '--port=8080'
+      - '--network=default'
+      - '--subnet=default'
+      - '--vpc-egress=all-traffic'
+      - '--set-env-vars=NODE_ENV=production,BOT_PREFIX=!,METRICS_ENABLED=true,METRICS_PORT=9090'
+      - '--set-secrets=DISCORD_TOKEN=discord-token:latest,DATABASE_URL=database-url:latest,REDIS_URL=redis-url:latest,VIRUSTOTAL_API_KEY=virustotal-api-key:latest'
+      - '--add-cloudsql-instances=$PROJECT_ID:us-central1:vertice-bot-db'
+    id: 'deploy-to-cloud-run'
+
+# Build configuration
+timeout: 1200s
+options:
+  machineType: 'N1_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
+
+# Substitutions (can be overridden)
+substitutions:
+  _DATABASE_URL: 'postgresql://vertice:PASSWORD@/vertice_bot?host=/cloudsql/projeto-vertice:us-central1:vertice-bot-db'
+
+# Images to store in Artifact Registry
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/vertice-discord-bot/bot:$COMMIT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/vertice-discord-bot/bot:latest'

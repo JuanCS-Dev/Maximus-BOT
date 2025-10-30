@@ -6,148 +6,151 @@ import {
   TextChannel,
   EmbedBuilder,
 } from 'discord.js';
+import { CommandType } from '../types';
 import { prisma } from '../database/client';
 import { logger } from '../utils/logger';
 
-export const data = new SlashCommandBuilder()
-  .setName('incident')
-  .setDescription('Start an incident response playbook')
-  .addStringOption((option) =>
-    option
-      .setName('type')
-      .setDescription('Incident type')
-      .setRequired(true)
-      .addChoices(
-        { name: 'Raid - Mass coordinated attack', value: 'raid' },
-        { name: 'Phishing - Malicious URLs/scams', value: 'phishing' },
-        { name: 'Malware - Malicious file distribution', value: 'malware' },
-        { name: 'Doxxing - Personal information leak', value: 'doxxing' },
-        { name: 'Toxicity - Severe harassment/abuse', value: 'toxicity' },
-        { name: 'Other - General security incident', value: 'other' }
-      )
-  )
-  .addStringOption((option) =>
-    option
-      .setName('severity')
-      .setDescription('Incident severity')
-      .setRequired(true)
-      .addChoices(
-        { name: 'Low - Minor impact', value: 'low' },
-        { name: 'Medium - Moderate impact', value: 'medium' },
-        { name: 'High - Significant impact', value: 'high' },
-        { name: 'Critical - Severe/ongoing threat', value: 'critical' }
-      )
-  )
-  .addStringOption((option) =>
-    option
-      .setName('description')
-      .setDescription('Brief description of the incident')
-      .setRequired(true)
-      .setMaxLength(500)
-  )
-  .addUserOption((option) =>
-    option
-      .setName('suspect')
-      .setDescription('Primary suspect (if known)')
-      .setRequired(false)
-  )
-  .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
-  .setDMPermission(false);
+const command: CommandType = {
+  data: new SlashCommandBuilder()
+    .setName('incident')
+    .setDescription('Start an incident response playbook')
+    .addStringOption((option) =>
+      option
+        .setName('type')
+        .setDescription('Incident type')
+        .setRequired(true)
+        .addChoices(
+          { name: 'Raid - Mass coordinated attack', value: 'raid' },
+          { name: 'Phishing - Malicious URLs/scams', value: 'phishing' },
+          { name: 'Malware - Malicious file distribution', value: 'malware' },
+          { name: 'Doxxing - Personal information leak', value: 'doxxing' },
+          { name: 'Toxicity - Severe harassment/abuse', value: 'toxicity' },
+          { name: 'Other - General security incident', value: 'other' }
+        )
+    )
+    .addStringOption((option) =>
+      option
+        .setName('severity')
+        .setDescription('Incident severity')
+        .setRequired(true)
+        .addChoices(
+          { name: 'Low - Minor impact', value: 'low' },
+          { name: 'Medium - Moderate impact', value: 'medium' },
+          { name: 'High - Significant impact', value: 'high' },
+          { name: 'Critical - Severe/ongoing threat', value: 'critical' }
+        )
+    )
+    .addStringOption((option) =>
+      option
+        .setName('description')
+        .setDescription('Brief description of the incident')
+        .setRequired(true)
+        .setMaxLength(500)
+    )
+    .addUserOption((option) =>
+      option
+        .setName('suspect')
+        .setDescription('Primary suspect (if known)')
+        .setRequired(false)
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+    .setDMPermission(false),
 
-export async function execute(
-  interaction: ChatInputCommandInteraction
-): Promise<void> {
-  try {
-    await interaction.deferReply({ ephemeral: true });
+  async execute(
+    interaction: ChatInputCommandInteraction
+  ): Promise<void> {
+    try {
+      await interaction.deferReply({ ephemeral: true });
 
-    const incidentType = interaction.options.getString('type', true);
-    const severity = interaction.options.getString('severity', true);
-    const description = interaction.options.getString('description', true);
-    const suspect = interaction.options.getUser('suspect');
+      const incidentType = interaction.options.getString('type', true);
+      const severity = interaction.options.getString('severity', true);
+      const description = interaction.options.getString('description', true);
+      const suspect = interaction.options.getUser('suspect');
 
-    logger.info(
-      `Incident playbook started: ${incidentType} (${severity}) by ${interaction.user.tag}`
-    );
+      logger.info(
+        `Incident playbook started: ${incidentType} (${severity}) by ${interaction.user.tag}`
+      );
 
-    // 1. Create incident case in database
-    const incidentCase = await prisma.incidentCase.create({
-      data: {
-        guildId: interaction.guildId!,
-        incidentType,
-        severity,
-        status: 'open',
-        channelId: '', // Will update after channel creation
-        relatedThreats: [],
-        timeline: {
-          events: [
-            {
-              timestamp: new Date().toISOString(),
-              action: 'incident_created',
-              actor: interaction.user.tag,
-              description: description,
-            },
-          ],
-          description: description,
-          reporter: interaction.user.tag,
-          reporterId: interaction.user.id,
-          suspect: suspect?.tag,
-          suspectId: suspect?.id,
+      // 1. Create incident case in database
+      const incidentCase = await prisma.incidentCase.create({
+        data: {
+          guildId: interaction.guildId!,
+          incidentType,
+          severity,
+          status: 'open',
+          channelId: '', // Will update after channel creation
+          relatedThreats: [],
+          timeline: {
+            events: [
+              {
+                timestamp: new Date().toISOString(),
+                action: 'incident_created',
+                actor: interaction.user.tag,
+                description: description,
+              },
+            ],
+            description: description,
+            reporter: interaction.user.tag,
+            reporterId: interaction.user.id,
+            suspect: suspect?.tag,
+            suspectId: suspect?.id,
+          },
         },
-      },
-    });
-
-    logger.info(`Incident case created: ${incidentCase.id}`);
-
-    // 2. Create private IR channel
-    const irChannel = await createIncidentChannel(
-      interaction,
-      incidentCase.id,
-      incidentType,
-      severity
-    );
-
-    if (!irChannel) {
-      await interaction.editReply({
-        content: '❌ Failed to create incident response channel',
       });
-      return;
+
+      logger.info(`Incident case created: ${incidentCase.id}`);
+
+      // 2. Create private IR channel
+      const irChannel = await createIncidentChannel(
+        interaction,
+        incidentCase.id,
+        incidentType,
+        severity
+      );
+
+      if (!irChannel) {
+        await interaction.editReply({
+          content: '❌ Failed to create incident response channel',
+        });
+        return;
+      }
+
+      // 3. Update incident case with channel ID
+      await prisma.incidentCase.update({
+        where: { id: incidentCase.id },
+        data: { channelId: irChannel.id },
+      });
+
+      // 4. Send initial message to IR channel
+      await sendIncidentBriefing(irChannel, {
+        caseId: incidentCase.id,
+        type: incidentType,
+        severity,
+        description,
+        reporter: interaction.user.tag,
+        suspect: suspect?.tag,
+      });
+
+      // 5. Notify initiator
+      await interaction.editReply({
+        content: `✅ Incident response playbook initiated!\n\n**Case ID:** \`${incidentCase.id}\`\n**IR Channel:** ${irChannel}\n**Status:** Open\n\nThe IR team has been notified.`,
+      });
+
+      logger.info(
+        `Incident playbook complete: ${incidentCase.id} (channel: ${irChannel.id})`
+      );
+    } catch (error: unknown) {
+      logger.error(`Error in /incident command:`, error);
+
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+
+      await interaction.editReply({
+        content: `❌ Failed to start incident playbook: ${errorMessage}`,
+      });
     }
-
-    // 3. Update incident case with channel ID
-    await prisma.incidentCase.update({
-      where: { id: incidentCase.id },
-      data: { channelId: irChannel.id },
-    });
-
-    // 4. Send initial message to IR channel
-    await sendIncidentBriefing(irChannel, {
-      caseId: incidentCase.id,
-      type: incidentType,
-      severity,
-      description,
-      reporter: interaction.user.tag,
-      suspect: suspect?.tag,
-    });
-
-    // 5. Notify initiator
-    await interaction.editReply({
-      content: `✅ Incident response playbook initiated!\n\n**Case ID:** \`${incidentCase.id}\`\n**IR Channel:** ${irChannel}\n**Status:** Open\n\nThe IR team has been notified.`,
-    });
-
-    logger.info(
-      `Incident playbook complete: ${incidentCase.id} (channel: ${irChannel.id})`
-    );
-  } catch (error: unknown) {
-    logger.error(`Error in /incident command:`, error);
-
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error';
-
-    await interaction.editReply({
-      content: `❌ Failed to start incident playbook: ${errorMessage}`,
-    });
   }
-}
+};
 
 /**
  * Create private incident response channel
@@ -428,3 +431,5 @@ function getSeverityEmoji(severity: string): string {
       return '🔵';
   }
 }
+
+export default command;
