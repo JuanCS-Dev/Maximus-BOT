@@ -53,7 +53,11 @@ const PORT = process.env.PORT || 8080;
 
 app.get('/health', async (_req, res) => {
   try {
-    // Check Discord connection
+    // Simplified health check - only check if Discord is ready
+    // Database and Redis are checked at startup and connection issues
+    // will be logged separately. We don't want to restart the container
+    // due to temporary connection issues.
+
     if (!client.isReady()) {
       return res.status(503).json({
         status: 'unhealthy',
@@ -62,15 +66,7 @@ app.get('/health', async (_req, res) => {
       });
     }
 
-    // Check database connection
-    const { prisma } = await import('./database/client');
-    await prisma.$queryRaw`SELECT 1`;
-
-    // Check Redis connection
-    const { redis } = await import('./cache/redis');
-    await redis.ping();
-
-    res.status(200).json({
+    return res.status(200).json({
       status: 'healthy',
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
@@ -81,12 +77,10 @@ app.get('/health', async (_req, res) => {
         commands: client.commands.size,
         ping: client.ws.ping,
       },
-      database: 'connected',
-      cache: 'connected',
     });
   } catch (error) {
     logger.error('Health check failed:', error);
-    res.status(503).json({
+    return res.status(503).json({
       status: 'unhealthy',
       error: error instanceof Error ? error.message : 'Unknown error',
     });

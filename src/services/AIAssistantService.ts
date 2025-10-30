@@ -2,7 +2,7 @@ import { injectable } from 'inversify';
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '../utils/logger';
 import { prisma } from '../database/client';
-import { CircuitBreaker, RateLimiter, resilient, retry } from '../utils/resilience';
+import { CircuitBreaker, RateLimiter, resilient } from '../utils/resilience';
 
 /**
  * AIAssistantService - AI-Powered Assistant using Claude

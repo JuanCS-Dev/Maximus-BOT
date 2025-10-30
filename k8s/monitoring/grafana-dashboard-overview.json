@@ -1,0 +1,213 @@
+{
+  "dashboard": {
+    "title": "Discord Bot Vértice - Overview",
+    "tags": ["discord-bot", "overview"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Bot Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"discord-bot-metrics\"}",
+            "legendFormat": "Status"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {"type": "value", "value": "1", "text": "UP"},
+              {"type": "value", "value": "0", "text": "DOWN"}
+            ],
+            "thresholds": {
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Uptime",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "time() - process_start_time_seconds{job=\"discord-bot-metrics\"}",
+            "legendFormat": "Uptime"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Total Commands Executed",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(discord_bot_commands_total{job=\"discord-bot-metrics\"})",
+            "legendFormat": "Total"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 4, "x": 8, "y": 0},
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 4,
+        "title": "Command Rate (per minute)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(discord_bot_commands_total{job=\"discord-bot-metrics\"}[5m]) * 60",
+            "legendFormat": "{{command}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4}
+      },
+      {
+        "id": 5,
+        "title": "Command Success Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(discord_bot_commands_success_total{job=\"discord-bot-metrics\"}[5m]) / (rate(discord_bot_commands_success_total{job=\"discord-bot-metrics\"}[5m]) + rate(discord_bot_commands_failed_total{job=\"discord-bot-metrics\"}[5m]))",
+            "legendFormat": "Success Rate"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+        "yaxes": [
+          {"format": "percentunit", "min": 0, "max": 1}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "container_memory_usage_bytes{pod=~\"discord-bot-vertice-.*\", container=\"bot\"}",
+            "legendFormat": "Used"
+          },
+          {
+            "expr": "container_spec_memory_limit_bytes{pod=~\"discord-bot-vertice-.*\", container=\"bot\"}",
+            "legendFormat": "Limit"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+        "yaxes": [
+          {"format": "bytes"}
+        ]
+      },
+      {
+        "id": 7,
+        "title": "CPU Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(container_cpu_usage_seconds_total{pod=~\"discord-bot-vertice-.*\", container=\"bot\"}[5m])",
+            "legendFormat": "Used"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+        "yaxes": [
+          {"format": "percentunit"}
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Database Connection Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "discord_bot_database_connection_status{job=\"discord-bot-metrics\"}",
+            "legendFormat": "Database"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 20},
+        "options": {
+          "colorMode": "background"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {"type": "value", "value": "1", "text": "Connected"},
+              {"type": "value", "value": "0", "text": "Disconnected"}
+            ],
+            "thresholds": {
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Redis Connection Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "discord_bot_redis_connection_status{job=\"discord-bot-metrics\"}",
+            "legendFormat": "Redis"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 20},
+        "options": {
+          "colorMode": "background"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {"type": "value", "value": "1", "text": "Connected"},
+              {"type": "value", "value": "0", "text": "Disconnected"}
+            ],
+            "thresholds": {
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Discord Gateway Latency",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "discord_bot_gateway_ping_ms{job=\"discord-bot-metrics\"}",
+            "legendFormat": "Ping (ms)"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+        "yaxes": [
+          {"format": "ms"}
+        ]
+      }
+    ],
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 1
+  }
+}

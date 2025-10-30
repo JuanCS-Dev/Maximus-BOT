@@ -1,0 +1,122 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: discord-bot-alerts
+  namespace: monitoring
+  labels:
+    app: discord-bot
+    release: prometheus
+spec:
+  groups:
+  - name: discord-bot
+    interval: 30s
+    rules:
+    # Bot Down Alert
+    - alert: DiscordBotDown
+      expr: up{job="discord-bot-metrics"} == 0
+      for: 2m
+      labels:
+        severity: critical
+        component: discord-bot
+      annotations:
+        summary: "Discord Bot Vértice is down"
+        description: "The Discord bot has been unreachable for more than 2 minutes."
+
+    # High Error Rate Alert
+    - alert: DiscordBotHighErrorRate
+      expr: rate(discord_bot_errors_total[5m]) > 0.1
+      for: 5m
+      labels:
+        severity: warning
+        component: discord-bot
+      annotations:
+        summary: "High error rate detected in Discord Bot"
+        description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+
+    # High Command Latency
+    - alert: DiscordBotHighLatency
+      expr: histogram_quantile(0.95, rate(discord_command_duration_seconds_bucket[5m])) > 2
+      for: 10m
+      labels:
+        severity: warning
+        component: discord-bot
+      annotations:
+        summary: "High command latency detected"
+        description: "P95 command latency is {{ $value }}s (threshold: 2s)."
+
+    # Memory Pressure
+    - alert: DiscordBotHighMemoryUsage
+      expr: container_memory_usage_bytes{pod=~"discord-bot-vertice-.*", container="bot"} / container_spec_memory_limit_bytes{pod=~"discord-bot-vertice-.*", container="bot"} > 0.85
+      for: 5m
+      labels:
+        severity: warning
+        component: discord-bot
+      annotations:
+        summary: "Discord Bot memory usage is high"
+        description: "Memory usage is at {{ $value | humanizePercentage }} of the limit."
+
+    # CPU Throttling
+    - alert: DiscordBotHighCPUUsage
+      expr: rate(container_cpu_usage_seconds_total{pod=~"discord-bot-vertice-.*", container="bot"}[5m]) / container_spec_cpu_quota{pod=~"discord-bot-vertice-.*", container="bot"} > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        component: discord-bot
+      annotations:
+        summary: "Discord Bot CPU usage is high"
+        description: "CPU usage is at {{ $value | humanizePercentage }} of the limit."
+
+    # Database Connection Issues
+    - alert: DiscordBotDatabaseConnectionFailed
+      expr: discord_bot_database_connection_status == 0
+      for: 2m
+      labels:
+        severity: critical
+        component: database
+      annotations:
+        summary: "Database connection failed"
+        description: "The bot cannot connect to PostgreSQL database."
+
+    # Redis Connection Issues
+    - alert: DiscordBotRedisConnectionFailed
+      expr: discord_bot_redis_connection_status == 0
+      for: 2m
+      labels:
+        severity: critical
+        component: cache
+      annotations:
+        summary: "Redis connection failed"
+        description: "The bot cannot connect to Redis cache."
+
+    # Pod Restart Rate
+    - alert: DiscordBotFrequentRestarts
+      expr: rate(kube_pod_container_status_restarts_total{pod=~"discord-bot-vertice-.*", container="bot"}[15m]) > 0.1
+      for: 5m
+      labels:
+        severity: warning
+        component: discord-bot
+      annotations:
+        summary: "Discord Bot is restarting frequently"
+        description: "Pod has restarted {{ $value }} times in the last 15 minutes."
+
+    # Discord API Rate Limiting
+    - alert: DiscordBotRateLimited
+      expr: rate(discord_bot_rate_limited_total[5m]) > 0.05
+      for: 5m
+      labels:
+        severity: warning
+        component: discord-api
+      annotations:
+        summary: "Bot is being rate limited by Discord API"
+        description: "Rate limit hits: {{ $value }} per second over the last 5 minutes."
+
+    # Low Command Success Rate
+    - alert: DiscordBotLowCommandSuccessRate
+      expr: rate(discord_bot_commands_success_total[10m]) / (rate(discord_bot_commands_success_total[10m]) + rate(discord_bot_commands_failed_total[10m])) < 0.95
+      for: 10m
+      labels:
+        severity: warning
+        component: discord-bot
+      annotations:
+        summary: "Command success rate is low"
+        description: "Success rate is {{ $value | humanizePercentage }} over the last 10 minutes."

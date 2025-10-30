@@ -1,0 +1,44 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: discord-bot-hpa
+  namespace: discord-bot
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: discord-bot-vertice
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+  # CPU-based scaling
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  # Memory-based scaling
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300  # Wait 5 minutes before scaling down
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 60  # Scale down 1 pod per minute max
+    scaleUp:
+      stabilizationWindowSeconds: 0  # Scale up immediately
+      policies:
+      - type: Pods
+        value: 2
+        periodSeconds: 60  # Scale up 2 pods per minute max
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      selectPolicy: Max  # Use the policy that scales up the most

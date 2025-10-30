@@ -20,7 +20,7 @@ steps:
     args:
       - 'set'
       - 'image'
-      - 'statefulset/discord-bot-vertice'
+      - 'deployment/discord-bot-vertice'
       - 'bot=us-central1-docker.pkg.dev/$PROJECT_ID/vertice-discord-bot/bot:latest'
       - '--namespace=discord-bot'
     env:
@@ -33,7 +33,7 @@ steps:
     args:
       - 'rollout'
       - 'status'
-      - 'statefulset/discord-bot-vertice'
+      - 'deployment/discord-bot-vertice'
       - '--namespace=discord-bot'
       - '--timeout=5m'
     env:

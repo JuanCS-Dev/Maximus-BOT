@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-discord-bot
+  namespace: monitoring
+type: Opaque
+stringData:
+  alertmanager.yaml: |
+    global:
+      resolve_timeout: 5m
+      slack_api_url: 'SLACK_WEBHOOK_URL_PLACEHOLDER'
+
+    route:
+      receiver: 'slack-notifications'
+      group_by: ['alertname', 'severity', 'component']
+      group_wait: 10s
+      group_interval: 5m
+      repeat_interval: 4h
+      routes:
+      - receiver: 'slack-critical'
+        matchers:
+        - severity = "critical"
+        continue: false
+      - receiver: 'slack-notifications'
+        matchers:
+        - severity =~ "warning|info"
+
+    receivers:
+    - name: 'slack-notifications'
+      slack_configs:
+      - channel: '#bot-alerts'
+        title: '[{{ .Status | toUpper }}] {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Summary:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Severity:* {{ .Labels.severity }}
+          *Component:* {{ .Labels.component }}
+          {{ end }}
+        send_resolved: true
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+
+    - name: 'slack-critical'
+      slack_configs:
+      - channel: '#bot-critical-alerts'
+        title: '🚨 [CRITICAL] {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Summary:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Component:* {{ .Labels.component }}
+          {{ end }}
+        send_resolved: true
+        color: 'danger'
+
+    inhibit_rules:
+    - source_matchers:
+      - severity = "critical"
+      target_matchers:
+      - severity = "warning"
+      equal: ['alertname', 'component']
