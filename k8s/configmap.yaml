@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: discord-bot-config
+  namespace: discord-bot
+data:
+  NODE_ENV: "production"
+  BOT_PREFIX: "!"
+  METRICS_ENABLED: "true"
+  METRICS_PORT: "9090"
+  LOG_LEVEL: "info"
+  PORT: "8080"

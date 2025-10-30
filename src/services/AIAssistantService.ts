@@ -2,6 +2,7 @@ import { injectable } from 'inversify';
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '../utils/logger';
 import { prisma } from '../database/client';
+import { CircuitBreaker, RateLimiter, resilient, retry } from '../utils/resilience';
 
 /**
  * AIAssistantService - AI-Powered Assistant using Claude
@@ -54,7 +55,26 @@ export class AIAssistantService {
   private model = 'claude-3-5-sonnet-20241022';
   private maxTokens = 2048;
 
+  // Resilience patterns
+  private circuitBreaker: CircuitBreaker;
+  private rateLimiter: RateLimiter;
+
   constructor() {
+    // Initialize circuit breaker for Anthropic API
+    this.circuitBreaker = new CircuitBreaker({
+      failureThreshold: 5, // Open after 5 failures
+      successThreshold: 2, // Close after 2 successes
+      timeout: 60000, // 1 minute timeout
+      name: 'anthropic-api',
+    });
+
+    // Rate limiter: Anthropic Tier 1 = 50 req/min
+    this.rateLimiter = new RateLimiter({
+      tokensPerInterval: 50,
+      interval: 60000, // 1 minute
+      maxTokens: 50,
+    });
+
     if (!process.env.ANTHROPIC_API_KEY) {
       logger.warn('ANTHROPIC_API_KEY not set - AI features will be disabled');
       return;
@@ -64,7 +84,10 @@ export class AIAssistantService {
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
 
-    logger.info('AIAssistantService initialized with Claude 3.5 Sonnet');
+    logger.info('AIAssistantService initialized with Claude 3.5 Sonnet', {
+      circuitBreaker: 'enabled',
+      rateLimit: '50 req/min',
+    });
   }
 
   /**
@@ -108,17 +131,33 @@ Message metadata:
 - Context: Discord message
 ` : '';
 
-      const response = await this.client.messages.create({
-        model: this.model,
-        max_tokens: 1024,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: `Analyze this message for phishing:\n\n${contextInfo}\nMessage content:\n"${content}"`,
+      // Acquire rate limit token
+      await this.rateLimiter.acquire();
+
+      // Make API call with retry + circuit breaker
+      const response = await resilient(
+        () =>
+          this.client!.messages.create({
+            model: this.model,
+            max_tokens: 1024,
+            system: systemPrompt,
+            messages: [
+              {
+                role: 'user',
+                content: `Analyze this message for phishing:\n\n${contextInfo}\nMessage content:\n"${content}"`,
+              },
+            ],
+          }),
+        {
+          breaker: this.circuitBreaker,
+          retry: {
+            maxAttempts: 3,
+            initialDelay: 1000,
+            retryableErrors: ['rate_limit', 'overloaded', 'timeout'],
           },
-        ],
-      });
+          timeout: 30000, // 30s timeout
+        }
+      );
 
       const resultText = response.content[0].type === 'text' ? response.content[0].text : '';
       const result = JSON.parse(resultText) as PhishingAnalysisResult;
@@ -186,17 +225,33 @@ Context:
 - Reply to: ${context.replyTo || 'none'}
 ` : '';
 
-      const response = await this.client.messages.create({
-        model: this.model,
-        max_tokens: 1024,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: `Analyze this message for toxicity:\n\n${contextInfo}\nMessage:\n"${content}"`,
+      // Acquire rate limit token
+      await this.rateLimiter.acquire();
+
+      // Make API call with resilience patterns
+      const response = await resilient(
+        () =>
+          this.client!.messages.create({
+            model: this.model,
+            max_tokens: 1024,
+            system: systemPrompt,
+            messages: [
+              {
+                role: 'user',
+                content: `Analyze this message for toxicity:\n\n${contextInfo}\nMessage:\n"${content}"`,
+              },
+            ],
+          }),
+        {
+          breaker: this.circuitBreaker,
+          retry: {
+            maxAttempts: 3,
+            initialDelay: 1000,
+            retryableErrors: ['rate_limit', 'overloaded', 'timeout'],
           },
-        ],
-      });
+          timeout: 30000,
+        }
+      );
 
       const resultText = response.content[0].type === 'text' ? response.content[0].text : '';
       const result = JSON.parse(resultText) as ToxicityAnalysisResult;

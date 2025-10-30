@@ -51,19 +51,54 @@ client.commands = new Collection<string, CommandType>();
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-app.get('/health', (_req, res) => {
-  const isHealthy = client.isReady();
-  const status = isHealthy ? 200 : 503;
+app.get('/health', async (_req, res) => {
+  try {
+    // Check Discord connection
+    if (!client.isReady()) {
+      return res.status(503).json({
+        status: 'unhealthy',
+        reason: 'Discord client not ready',
+        uptime: process.uptime(),
+      });
+    }
 
-  res.status(status).json({
-    status: isHealthy ? 'healthy' : 'unhealthy',
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString(),
-    guilds: client.guilds.cache.size,
-    users: client.users.cache.size,
-    commands: client.commands.size,
-    ping: client.ws.ping,
-  });
+    // Check database connection
+    const { prisma } = await import('./database/client');
+    await prisma.$queryRaw`SELECT 1`;
+
+    // Check Redis connection
+    const { redis } = await import('./cache/redis');
+    await redis.ping();
+
+    res.status(200).json({
+      status: 'healthy',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+      discord: {
+        ready: client.isReady(),
+        guilds: client.guilds.cache.size,
+        users: client.users.cache.size,
+        commands: client.commands.size,
+        ping: client.ws.ping,
+      },
+      database: 'connected',
+      cache: 'connected',
+    });
+  } catch (error) {
+    logger.error('Health check failed:', error);
+    res.status(503).json({
+      status: 'unhealthy',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+app.get('/ready', (_req, res) => {
+  if (client.isReady()) {
+    res.status(200).json({ ready: true });
+  } else {
+    res.status(503).json({ ready: false });
+  }
 });
 
 app.get('/', (_req, res) => {
@@ -116,25 +151,45 @@ async function start() {
 }
 
 // Graceful shutdown
-async function shutdown() {
-  logger.info('🛑 Desligando bot...');
+let isShuttingDown = false;
+
+async function shutdown(signal: string) {
+  if (isShuttingDown) {
+    logger.warn('Shutdown already in progress, ignoring signal');
+    return;
+  }
+
+  isShuttingDown = true;
+  logger.info(`🛑 Received ${signal}, starting graceful shutdown...`);
+
+  // Set timeout for forced shutdown
+  const forceShutdownTimer = setTimeout(() => {
+    logger.error('⏱️  Graceful shutdown timed out, forcing exit');
+    process.exit(1);
+  }, 30000); // 30 seconds timeout
 
   try {
     // Disconnect from Discord
+    logger.info('Disconnecting from Discord...');
     client.destroy();
-    logger.info('Desconectado do Discord');
+    logger.info('✅ Disconnected from Discord');
 
     // Disconnect from database
+    logger.info('Disconnecting from database...');
     await disconnectDatabase();
-    logger.info('Desconectado do PostgreSQL');
+    logger.info('✅ Disconnected from PostgreSQL');
 
     // Disconnect from cache
+    logger.info('Disconnecting from cache...');
     await disconnectCache();
-    logger.info('Desconectado do Redis');
+    logger.info('✅ Disconnected from Redis');
 
+    clearTimeout(forceShutdownTimer);
+    logger.info('✅ Graceful shutdown complete');
     process.exit(0);
   } catch (error) {
-    logger.error('Erro durante shutdown:', error);
+    logger.error('❌ Error during shutdown:', error);
+    clearTimeout(forceShutdownTimer);
     process.exit(1);
   }
 }
@@ -150,8 +205,8 @@ process.on('uncaughtException', (error: Error) => {
 });
 
 // Graceful shutdown handlers
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 // Iniciar bot
 start();
